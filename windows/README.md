@@ -22,14 +22,12 @@
 ## 用法
 ```powershell
 # 1) 設定（PowerShell 原生：build.ps1 會 dot-source windows\config.ps1）
-copy windows\config.example.ps1 windows\config.ps1   # 編輯 $SRC_ISO（必填）、$DRIVERS_DIR（預設抓 dev release）
+copy windows\build_from_zip.ps1 windows\build_from_zip.ps1   # 編輯 $SRC_ISO（必填）、$DRIVERS_DIR（預設抓 dev release）
 
 # 2) 執行（會自動提權到系統管理員）
-powershell -ExecutionPolicy Bypass -File windows\build.ps1
+powershell -ExecutionPolicy Bypass -File windows\build_from_zip.ps1
 #   -> win11-droidvm-final.qcow2
 ```
-> 設定優先序：環境變數 / CLI　>　`windows\config.ps1`　>　內建預設。
-> 也可以完全不用 config.ps1，直接設環境變數後跑，例如 `$env:SRC_ISO='...'; .\windows\build.ps1`。
 
 ## 流程（build.ps1）
 1. 解析驅動來源（URL→下載 dev release zip / 本地 zip / 資料夾）
@@ -42,17 +40,3 @@ powershell -ExecutionPolicy Bypass -File windows\build.ps1
 8. 放入 `unattend.xml`（首次開機 OOBE 建 USER、autologon）
 9. 卸載 VHDX → `qemu-img convert` 成 qcow2
 
-## 快速換驅動（不重做整顆）
-現有 qcow2 → 轉 vhdx → 掛載 → 注入 → 轉回，不用開機、不跳提示、~2–3 分：
-```powershell
-qemu-img convert -O vhdx win11-droidvm-final.qcow2 tmp.vhdx
-Mount-VHD tmp.vhdx            # 記下 Windows 分割的磁碟機代號，假設 W:
-dism /Image:W:\ /Add-Driver /Driver:C:\newdrivers /Recurse /ForceUnsigned
-Dismount-VHD tmp.vhdx
-qemu-img convert -O qcow2 tmp.vhdx win11-droidvm-final.qcow2
-```
-
-## 跨架構提醒
-x64 host 套用/注入 ARM64 映像 + `bcdboot` **多半可行**（apply 是解檔、add-driver 寫離線 DriverStore、
-BCD 格式中性）。少數環境會踩坑——若 bcdboot 失敗或開機不了，改在 **ARM64 Windows 或 ARM64 WinPE**
-上跑這幾步最保險。
