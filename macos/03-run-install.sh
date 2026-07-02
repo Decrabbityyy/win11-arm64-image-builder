@@ -33,8 +33,9 @@ command -v qemu-system-aarch64 >/dev/null || { echo "需要 qemu：brew install 
 BREW="$(brew --prefix 2>/dev/null || echo /opt/homebrew)"
 CODE=""; for c in "$BREW/share/qemu/edk2-aarch64-code.fd" /usr/local/share/qemu/edk2-aarch64-code.fd; do [ -f "$c" ] && CODE="$c" && break; done
 [ -n "$CODE" ] || { echo "找不到 edk2-aarch64-code.fd（brew install qemu）"; exit 1; }
-VARS="$FILES/edk2-arm-vars.fd"; [ -f "$VARS" ] || dd if=/dev/zero of="$VARS" bs=1m count=64 2>/dev/null
-[ -f "$QCOW" ] || qemu-img create -f qcow2 "$QCOW" "$DISK_SIZE"
+# 每次 build 都用全新的工作碟 + NVRAM（前次中斷後的髒碟/舊 NVRAM 會導致 Phase B reboot loop）
+VARS="$FILES/edk2-arm-vars.fd"; rm -f "$VARS"; dd if=/dev/zero of="$VARS" bs=1m count=64 2>/dev/null
+rm -f "$QCOW"; qemu-img create -f qcow2 "$QCOW" "$DISK_SIZE" >/dev/null
 QMP="$FILES/qmp.sock"
 case "$DISPLAY_OPT" in *vnc*) VNC_NOTE=" (VNC: open vnc://127.0.0.1:5905)";; *) VNC_NOTE="";; esac
 echo "[qemu] HVF accel, BACKGROUND=$BACKGROUND, display=${DISPLAY_OPT}${VNC_NOTE}"
