@@ -78,6 +78,8 @@ stop_qemu() {
 
 # ---- Phase A：安裝媒體開機、套用映像 ----
 echo "[qemu] === Phase A：安裝媒體開機、套用映像 ==="
+echo "[qemu]   ⓘ 套用映像後、畫面會出現「Press any key / CD 開機提示」反覆循環約 1-2 分 —— 這是正常的。"
+echo "[qemu]     腳本會自動偵測套用完成、停下來離線補 BCD testsigning，再進 Phase B。此階段請勿中斷。"
 start_qemu cd
 # 等套用完成：qcow2 成長超過門檻後停滯 STALL 秒（Setup 套完映像要 reboot；此時 CD 會 loop，不會自己結束）。
 MIN_APPLIED=$((3 * 1024 * 1024 * 1024)); STALL=75; MAXA=2400
