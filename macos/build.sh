@@ -19,6 +19,26 @@ for t in qemu-system-aarch64 wimlib-imagex xorriso; do
   command -v "$t" >/dev/null || { echo "缺 $t — brew install qemu wimlib xorriso"; exit 1; }
 done
 
+# --- 顯示解析（早期 fail-fast，免得跑完 02 才在 03 發現前台不可用）---
+#   直接設 DISPLAY_OPT     -> 照用，不 fallback（尊重你的明確選擇）。
+#   BACKGROUND=false(前台) -> 有 GUI session 用原生視窗(cocoa)；非 GUI(如 SSH)自動退回 VNC；
+#                            VNC(5905) 也被佔用才退出。「只有前台這條會 fallback」。
+#   BACKGROUND=true/未設    -> VNC(headless 預設)。
+if [ -z "${DISPLAY_OPT:-}" ]; then
+  case "${BACKGROUND:-true}" in
+    false|0|no)
+      if [ "$(launchctl managername 2>/dev/null)" = "Aqua" ]; then
+        export DISPLAY_OPT="-display cocoa"; echo "[build] 顯示：原生 qemu 視窗（BACKGROUND=false）"
+      elif ! (: >/dev/tcp/127.0.0.1/5905) 2>/dev/null; then
+        export DISPLAY_OPT="-vnc 127.0.0.1:5"
+        echo "[build] ⚠ BACKGROUND=false 但非 GUI session（前台不可用）-> 退回 VNC：open vnc://127.0.0.1:5905"
+      else
+        echo "[build] ✗ 前台不可用、且 VNC port 5905 已被佔用 -> 無法顯示，退出"; exit 1
+      fi ;;
+    *) export DISPLAY_OPT="-vnc 127.0.0.1:5" ;;
+  esac
+fi
+
 # 解析 install.wim 的版本 index：IMAGE_INDEX 空或 0 -> 列出版本讓使用者選；有值 -> 驗證後採用。
 # 用 wimlib-imagex 讀 ISO 內的 install.wim（macOS 有 wimlib，不需 Windows 的 DISM）。回傳選定 index 到 stdout。
 resolve_image_index() {
