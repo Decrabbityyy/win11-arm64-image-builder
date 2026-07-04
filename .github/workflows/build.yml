@@ -30,11 +30,10 @@ jobs:
         shell: pwsh
         run: Invoke-WebRequest -Uri "${{ inputs.iso_url }}" -OutFile "win11.iso" -UseBasicParsing
 
-      - name: 安装依赖 (qemu + 7-Zip)
+      - name: 安装依赖 (qemu)
         shell: pwsh
         run: |
           winget install -e --id SoftwareFreedomConservancy.QEMU --silent --accept-source-agreements
-          winget install -e --id 7zip.7zip --silent --accept-source-agreements
 
       - name: 执行构建
         shell: pwsh
