@@ -53,7 +53,7 @@ jobs:
       - name: 执行构建
         shell: pwsh
         env:
-          SRC_ISO:        "win11.iso"
+          SRC_ISO:        "./win11.iso"
           OUT_QCOW:       "win11-arm64-${{ steps.date.outputs.date }}.qcow2"
           IMAGE_INDEX:    ${{ inputs.image_index }}
           COMPRESS:       ${{ inputs.enable_qcow2_compress && 'true' || '' }}
