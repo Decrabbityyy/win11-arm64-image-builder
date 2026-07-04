@@ -15,10 +15,6 @@ on:
         required: false
         default: true
         type: boolean
-      compress_level:
-        description: '7-Zip 压缩等级 (1=最快, 5=推荐平衡, 9=最高压缩)'
-        required: false
-        default: '5'
 
 jobs:
   build:
@@ -70,21 +66,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           .\windows\build.ps1
 
-      - name: 7-Zip 压缩产物
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $base = "win11-arm64-${{ steps.date.outputs.date }}"
-          $qcow = "$base.qcow2"
-          $final = "$base.qcow2.7z"
-          if (-not (Test-Path $qcow)) { throw "未找到 $qcow" }
-          Write-Host "7-Zip compression (level ${{ inputs.compress_level }})..."
-          7z a -mx=${{ inputs.compress_level }} -m0=LZMA2 $final $qcow
-
       - name: 上传产物
         uses: actions/upload-artifact@v4
         with:
           name: win11-arm64-${{ steps.date.outputs.date }}
-          path: "*.7z"
+          path: "*.qcow2"
           if-no-files-found: error
           retention-days: 30
