@@ -46,7 +46,7 @@ jobs:
       - name: 安装 qemu-img
         shell: pwsh
         run: |
-          choco install qemu -y --no-progress
+          choco install qemu-img -y --no-progress
           $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
           qemu-img --version
 
