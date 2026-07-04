@@ -35,6 +35,15 @@ jobs:
         run: |
           winget install -e --id SoftwareFreedomConservancy.QEMU --silent --accept-source-agreements
 
+      - name: 刷新系统 PATH 环境变量
+        shell: pwsh
+        run: |
+          # 从系统/用户环境变量重新加载 PATH，并导出给后续步骤
+          $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+          $userPath   = [System.Environment]::GetEnvironmentVariable("Path", "User")
+          $env:Path = "$machinePath;$userPath"
+          echo "PATH=$env:Path" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "PATH refreshed."
       - name: 执行构建
         shell: pwsh
         env:
