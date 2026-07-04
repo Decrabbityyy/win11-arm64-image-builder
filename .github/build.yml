@@ -1,0 +1,78 @@
+name: Build Win11 ARM64 Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso_url:
+        description: 'Windows 11 ARM64 ISO 下载直链'
+        required: true
+      compress_level:
+        description: '7-Zip 压缩等级 (1=最快, 5=推荐平衡, 9=最高压缩)'
+        required: false
+        default: '5'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 150
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 生成日期标识
+        shell: pwsh
+        run: |
+          $date = Get-Date -Format "yyyyMMdd"
+          "BUILD_DATE=$date" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Build date: $date"
+
+      - name: 下载 ISO
+        shell: pwsh
+        run: Invoke-WebRequest -Uri "${{ inputs.iso_url }}" -OutFile "win11.iso" -UseBasicParsing
+
+      - name: 安装依赖 (qemu + 7-Zip)
+        shell: pwsh
+        run: |
+          winget install -e --id SoftwareFreedomConservancy.QEMU --silent --accept-source-agreements
+          winget install -e --id 7zip.7zip --silent --accept-source-agreements
+
+      - name: 执行构建
+        shell: pwsh
+        env:
+          SRC_ISO:        "win11.iso"
+          OUT_QCOW:       "win11-arm64-${{ env.BUILD_DATE }}.qcow2"
+          DRIVERS_DIR:    "https://github.com/HuJK/gunyah-guest-drivers-windows/releases/download/dev/gunyah-arm64-drivers.zip"
+          DVM_USERNAME:   "droidvm"
+          DVM_PASSWORD:   "DroidVM"
+          SSH_PUBKEY:     ""
+          DISK_SIZE_MB:   "40960"
+          DRIVER_DIR:     "ZIP/drivers"
+          DRIVER_INSTALL: "NetKVM rdmapool pvmpower vioinput viostor vioscsi"
+          DRIVER_CERT:    "ZIP/DroidVM_Test.cer"
+          OPENSSH_SRC:    "https://github.com/PowerShell/Win32-OpenSSH/releases/download/10.0.0.0p2-Preview/OpenSSH-ARM64-v10.0.0.0.msi"
+        run: .\windows\build.ps1
+
+      - name: 压缩产物 (qemu + 7-Zip)
+        shell: pwsh
+        run: |
+          $base = "win11-arm64-${{ env.BUILD_DATE }}"
+          $qcow = "$base.qcow2"
+          $final = "$base.qcow2.7z"
+          
+          if (Test-Path $qcow) {
+            Write-Host "qcow2 internal compression..."
+            qemu-img convert -c -O qcow2 $qcow "$qcow.tmp"
+            Move-Item -Force "$qcow.tmp" $qcow
+            
+            $level = ${{ inputs.compress_level }}
+            Write-Host "7-Zip compression (level $level)..."
+            & "C:\Program Files\7-Zip\7z.exe" a -mx=$level -m0=LZMA2 $final $qcow
+          }
+
+      - name: 上传压缩后的产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: win11-arm64-${{ env.BUILD_DATE }}
+          path: "*.7z"
+          if-no-files-found: error
+          retention-days: 30
