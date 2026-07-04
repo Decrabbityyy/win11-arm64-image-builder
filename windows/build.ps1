@@ -60,7 +60,7 @@ function Resolve-InputFile([string]$Src, [string]$SaveAs = "") {
         return $dst
     }
     if (-not (Test-Path $Src)) { throw "file not found: $Src" }
-    return $Src
+    return (Resolve-Path $Src).ProviderPath
 }
 
 # Driver zip/folder source -> the "root directory" after extraction. DRIVER_DIR / DRIVER_CERT reference this root via the ZIP/ prefix (mirrors macOS).
